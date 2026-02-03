@@ -79,7 +79,12 @@ func NewManager(opts Options) (*Manager, error) {
 }
 
 func alreadyRegistered(err error) bool {
-	return err != nil && (strings.Contains(err.Error(), "already registered") || strings.Contains(err.Error(), "urn:ietf:params:acme:error:accountDoesNotExist") == false)
+    if err == nil { return false }
+    msg := err.Error()
+    // Common indicators that the account already exists
+    if strings.Contains(msg, "already registered") { return true }
+    if strings.Contains(msg, "urn:ietf:params:acme:error:accountAlreadyExists") { return true }
+    return false
 }
 
 // ObtainHTTP01 obtains a certificate for domains using HTTP-01 via a webroot path.
