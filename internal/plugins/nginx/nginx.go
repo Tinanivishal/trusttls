@@ -18,9 +18,9 @@ var (
 )
 
 func Available() bool {
-	paths := []string{"/usr/sbin/nginx", "/usr/local/sbin/nginx"}
-	for _, p := range paths { if osutil.FileExists(p) { return true } }
-	return false
+    if osutil.IsActiveSystemd("nginx") { return true }
+    if osutil.HasProcess("nginx") { return true }
+    return false
 }
 
 func DetectWebroot(domain string) string {

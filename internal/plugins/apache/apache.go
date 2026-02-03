@@ -18,11 +18,14 @@ var (
 )
 
 func Available() bool {
-	paths := []string{"/usr/sbin/apache2ctl", "/usr/sbin/apachectl", "/usr/local/sbin/apachectl", "/usr/sbin/httpd", "/usr/local/sbin/httpd"}
-	for _, p := range paths {
-		if osutil.FileExists(p) { return true }
-	}
-	return false
+    // Prefer checking if service is actually running
+    if osutil.IsActiveSystemd("apache2") || osutil.IsActiveSystemd("httpd") {
+        return true
+    }
+    if osutil.HasProcess("apache2", "httpd") {
+        return true
+    }
+    return false
 }
 
 func DetectWebroot(domain string) string {

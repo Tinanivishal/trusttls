@@ -23,3 +23,24 @@ func Run(name string, args ...string) error {
 	cmd.Stderr = nil
 	return cmd.Run()
 }
+
+// CommandExists reports whether a command is available on PATH.
+func CommandExists(name string) bool {
+    _, err := exec.LookPath(name)
+    return err == nil
+}
+
+// IsActiveSystemd returns true if the given unit is active according to systemctl.
+func IsActiveSystemd(unit string) bool {
+    if !CommandExists("systemctl") { return false }
+    return Run("systemctl", "is-active", "--quiet", unit) == nil
+}
+
+// HasProcess returns true if any of the named processes are found using pidof or pgrep.
+func HasProcess(names ...string) bool {
+    for _, n := range names {
+        if CommandExists("pidof") && Run("pidof", n) == nil { return true }
+        if CommandExists("pgrep") && Run("pgrep", "-x", n) == nil { return true }
+    }
+    return false
+}

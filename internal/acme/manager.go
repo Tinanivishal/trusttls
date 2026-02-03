@@ -18,7 +18,7 @@ import (
 	"github.com/go-acme/lego/v4/challenge/http01"
 	"github.com/go-acme/lego/v4/lego"
 	"github.com/go-acme/lego/v4/registration"
-	webrootprov "github.com/go-acme/lego/v4/providers/http/webroot"
+	"github.com/trustctl/trusttls/internal/acme/webrootprovider"
 )
 
 const (
@@ -84,8 +84,7 @@ func alreadyRegistered(err error) bool {
 
 // ObtainHTTP01 obtains a certificate for domains using HTTP-01 via a webroot path.
 func (m *Manager) ObtainHTTP01(domains []string, webroot string) (*certificate.Resource, error) {
-	provider, err := webrootprov.NewProvider(webroot)
-	if err != nil { return nil, err }
+	provider := webrootprovider.New(webroot)
 	if err := m.client.Challenge.SetHTTP01Provider(provider); err != nil { return nil, err }
 	req := certificate.ObtainRequest{ Domains: domains, Bundle: true }
 	return m.client.Certificate.Obtain(req)
