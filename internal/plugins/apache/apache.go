@@ -15,6 +15,8 @@ import (
 var (
 	serverNameRe   = regexp.MustCompile(`(?i)^\s*ServerName\s+(.+)$`)
 	documentRootRe = regexp.MustCompile(`(?i)^\s*DocumentRoot\s+(.+)$`)
+	sslEngineRe    = regexp.MustCompile(`(?i)^\s*SSLEngine\s+(.+)$`)
+	sslCertRe      = regexp.MustCompile(`(?i)^\s*SSLCertificateFile\s+(.+)$`)
 )
 
 func Available() bool {
@@ -26,6 +28,40 @@ func Available() bool {
         return true
     }
     return false
+}
+
+func DetectSSLMode(domain string) bool {
+	for _, dir := range candidateConfDirs() {
+		if scanVhostsForSSL(dir, domain) {
+			return true
+		}
+	}
+	return false
+}
+
+func scanVhostsForSSL(dir, domain string) bool {
+	entries, _ := os.ReadDir(dir)
+	for _, e := range entries {
+		if e.IsDir() { continue }
+		path := filepath.Join(dir, e.Name())
+		f, err := os.Open(path)
+		if err != nil { continue }
+		s := bufio.NewScanner(f)
+		var seenDomain bool
+		var sslEnabled bool
+		for s.Scan() {
+			line := strings.TrimSpace(s.Text())
+			if m := serverNameRe.FindStringSubmatch(line); len(m) == 2 {
+				if strings.EqualFold(m[1], domain) { seenDomain = true }
+			}
+			if m := sslEngineRe.FindStringSubmatch(line); len(m) == 2 {
+				if strings.EqualFold(strings.TrimSpace(m[1]), "on") { sslEnabled = true }
+			}
+		}
+		_ = f.Close()
+		if seenDomain && sslEnabled { return true }
+	}
+	return false
 }
 
 func DetectWebroot(domain string) string {
@@ -84,6 +120,39 @@ func NewInstaller(storeDir string, assumeYes bool) *installer {
 }
 
 func (i *installer) Webroot(domain string) string { return DetectWebroot(domain) }
+
+func (i *installer) IsSSLEnabled(domain string) bool { return DetectSSLMode(domain) }
+
+func (i *installer) DetectVhost(domain string) (string, string) {
+	for _, dir := range candidateConfDirs() {
+		if configPath := findVhostForDomain(dir, domain); configPath != "" {
+			return configPath, "apache"
+		}
+	}
+	return "", "apache"
+}
+
+func findVhostForDomain(dir, domain string) string {
+	entries, _ := os.ReadDir(dir)
+	for _, e := range entries {
+		if e.IsDir() { continue }
+		path := filepath.Join(dir, e.Name())
+		f, err := os.Open(path)
+		if err != nil { continue }
+		s := bufio.NewScanner(f)
+		for s.Scan() {
+			line := strings.TrimSpace(s.Text())
+			if m := serverNameRe.FindStringSubmatch(line); len(m) == 2 {
+				if strings.EqualFold(m[1], domain) { 
+					_ = f.Close()
+					return path 
+				}
+			}
+		}
+		_ = f.Close()
+	}
+	return ""
+}
 
 func (i *installer) Install(domain string) error {
 	if !i.assumeYes {

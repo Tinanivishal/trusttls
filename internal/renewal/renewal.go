@@ -18,13 +18,14 @@ type Config struct {
 	Domain    string   `yaml:"domain"`
 	Email     string   `yaml:"email"`
 	Server    string   `yaml:"server"`
-	Method    string   `yaml:"method"`   // http-01|dns-01
+	Method    string   `yaml:"method"`   // http-01|dns-01|digicert
 	Webroot   string   `yaml:"webroot"`  // for http-01
 	DNSPlugin string   `yaml:"dns_plugin"`
 	KeyType   string   `yaml:"key_type"`
 	KeySize   int      `yaml:"key_size"`
 	Targets   []string `yaml:"targets"` // apache|nginx
 	BaseDir   string   `yaml:"base_dir"`
+	Provider  string   `yaml:"provider"`  // letsencrypt|digicert
 }
 
 func dir() string {
@@ -67,21 +68,56 @@ func due(domain string) bool {
 }
 
 func renewOne(c Config, verbose bool) error {
-	if c.Method != "http-01" {
-		return fmt.Errorf("unsupported method: %s", c.Method)
+	accountManager := store.NewAccountManager(c.BaseDir)
+	
+	switch c.Provider {
+	case "digicert":
+		digiCertConfig, err := accountManager.GetDigiCertConfig(c.Email)
+		if err != nil {
+			return fmt.Errorf("failed to load DigiCert credentials: %w", err)
+		}
+		
+		provider := acme.NewDigiCertProvider(*digiCertConfig)
+		cert, err := provider.ObtainCertificate([]string{c.Domain})
+		if err != nil {
+			return err
+		}
+		if _, err := store.SaveCertificate(c.BaseDir, c.Domain, cert); err != nil {
+			return err
+		}
+		if verbose {
+			fmt.Printf("renewed %s via DigiCert\n", c.Domain)
+		}
+		
+	case "letsencrypt", "":
+		if c.Method != "http-01" {
+			return fmt.Errorf("unsupported method: %s", c.Method)
+		}
+		m, err := acme.NewManager(acme.Options{
+			Email:   c.Email,
+			Server:  c.Server,
+			KeyType: c.KeyType,
+			KeySize: c.KeySize,
+			BaseDir: c.BaseDir,
+		})
+		if err != nil {
+			return err
+		}
+		cert, err := m.ObtainHTTP01([]string{c.Domain}, c.Webroot)
+		if err != nil {
+			return err
+		}
+		if _, err := store.SaveCertificate(c.BaseDir, c.Domain, cert); err != nil {
+			return err
+		}
+		if verbose {
+			fmt.Printf("renewed %s via Let's Encrypt\n", c.Domain)
+		}
+		
+	default:
+		return fmt.Errorf("unsupported provider: %s", c.Provider)
 	}
-	m, err := acme.NewManager(acme.Options{
-		Email:   c.Email,
-		Server:  c.Server,
-		KeyType: c.KeyType,
-		KeySize: c.KeySize,
-		BaseDir: c.BaseDir,
-	})
-	if err != nil { return err }
-	cert, err := m.ObtainHTTP01([]string{c.Domain}, c.Webroot)
-	if err != nil { return err }
-	if _, err := store.SaveCertificate(c.BaseDir, c.Domain, cert); err != nil { return err }
-	if verbose { fmt.Printf("renewed %s\n", c.Domain) }
+	
 	return nil
 }
 
