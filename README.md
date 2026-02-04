@@ -1,17 +1,17 @@
-# TrustTLS - SSL Certificate Management Tool
+# TrustTLS - Easy SSL Certificate Tool
 
-TrustTLS is a modern SSL certificate management tool that supports both Let's Encrypt and DigiCert certificates with behavior similar to Certbot.
+TrustTLS is a simple tool for getting SSL certificates. It works with both Let's Encrypt (free) and DigiCert (paid) certificates.
 
-## Features
+## What It Does
 
-- 🚀 **Dual Provider Support**: Let's Encrypt (free) and DigiCert (commercial)
-- 🔐 **ACME Protocol**: Full ACME compliance with External Account Binding (EAB)
-- 🌐 **Web Server Integration**: Apache and Nginx plugin support
-- 📊 **Interactive CLI**: Beautiful progress indicators and user-friendly interface
-- 🔄 **Automatic Renewal**: Seamless certificate renewal with stored credentials
-- 📁 **Standard Paths**: Certificates stored in standard locations (not in root)
+- 🚀 **Two Certificate Options**: Let's Encrypt (free) and DigiCert (paid)
+- 🔐 **Automatic Setup**: Handles all the technical certificate stuff
+- 🌐 **Web Server Ready**: Works with Apache and Nginx
+- 📊 **Easy to Use**: Simple commands with clear progress
+- 🔄 **Auto-Renewal**: Keeps your certificates updated
+- 📁 **Safe Storage**: Saves certificates in standard folders
 
-## Installation
+## How to Install
 
 ```bash
 # Build from source
@@ -21,85 +21,90 @@ go build -o trusttls ./cmd/trusttls
 go install ./cmd/trusttls
 ```
 
-## Quick Start
+## Get Started
 
-### Let's Encrypt (Default)
+### Let's Encrypt (Free Option)
 
 ```bash
-# Basic usage (auto-detects web server)
+# Basic use (finds your web server automatically)
 trusttls install --domain example.com --email admin@example.com
 
-# With Apache plugin (like certbot --apache)
-trusttls install --apache --domain example.com --email admin@example.com
+# For Apache web server
+trusttls install --web-server apache --domain example.com --email admin@example.com
 
-# With Nginx plugin (like certbot --nginx)
-trusttls install --nginx --domain example.com --email admin@example.com
+# For Nginx web server
+trusttls install --web-server nginx --domain example.com --email admin@example.com
 
-# Non-interactive mode
+# Say yes to everything (no questions)
 trusttls install --domain example.com --email admin@example.com --yes
 ```
 
-### DigiCert with ACME EAB (like certbot)
+### DigiCert with ACME (Paid Option)
 
 ```bash
-# Exact equivalent to certbot command
+# Simple English flags
 trusttls install \
-  --apache \
+  --web-server apache \
   --server https://one.digicert.com/mpki/api/v1/acme/v2/directory \
-  --eab-kid "<EAB_KID>" \
-  --eab-hmac-key "<EAB_HMAC_KEY>" \
+  --digicert-key "<YOUR_KEY_ID>" \
+  --digicert-secret "<YOUR_SECRET_KEY>" \
   --domain example.com \
-  --agree-tos \
-  --non-interactive \
-  --email user@example.com
+  --email user@example.com \
+  --yes
 
-# With interactive mode
+# With organization info
 trusttls install \
-  --apache \
+  --web-server nginx \
+  --cert-provider digicert \
   --server https://one.digicert.com/mpki/api/v1/acme/v2/directory \
-  --eab-kid "your-kid-here" \
-  --eab-hmac-key "your-hmac-key-here" \
+  --digicert-key "your-key-id" \
+  --digicert-secret "your-secret-key" \
+  --account-id "your-account-id" \
+  --org-id "your-org-id" \
   --domain example.com \
   --email user@example.com
 ```
 
-## Command Reference
+## Commands
 
 ### install
 
-Install SSL certificate for a domain.
+Get and set up an SSL certificate for your website.
 
 ```bash
-trusttls install [flags]
+trusttls install [options]
 ```
 
-#### Flags
+#### Main Options
 
-| Flag | Description | Example |
-|------|-------------|---------|
-| `--domain` | Domain to issue certificate for | `example.com` |
-| `--email` | Account email | `admin@example.com` |
-| `--apache` | Use Apache plugin (like certbot --apache) | `--apache` |
-| `--nginx` | Use Nginx plugin (like certbot --nginx) | `--nginx` |
-| `--server` | ACME directory URL | `https://acme-v02.api.letsencrypt.org/directory` |
-| `--eab-kid` | EAB Key ID for DigiCert | `<EAB_KID>` |
-| `--eab-hmac-key` | EAB HMAC Key for DigiCert | `<EAB_HMAC_KEY>` |
-| `--staging` | Use Let's Encrypt staging | `--staging` |
-| `--yes` | Non-interactive mode | `--yes` |
-| `--key-type` | Key algorithm: rsa or ecdsa | `ecdsa` |
+| Option | What it does | Example |
+|--------|-------------|---------|
+| `--domain` | Website name | `example.com` |
+| `--email` | Your email | `admin@example.com` |
+| `--web-server` | Web server type | `apache` or `nginx` |
+| `--apache` | Use Apache web server | `--apache` |
+| `--nginx` | Use Nginx web server | `--nginx` |
+| `--cert-provider` | Certificate company | `letsencrypt` or `digicert` |
+| `--server` | Certificate server URL | `https://acme-v02.api.letsencrypt.org/directory` |
+| `--digicert-key` | DigiCert key ID | `<YOUR_KEY_ID>` |
+| `--digicert-secret` | DigiCert secret key | `<YOUR_SECRET_KEY>` |
+| `--account-id` | DigiCert account ID | `your-account-id` |
+| `--org-id` | DigiCert organization ID | `your-org-id` |
+| `--yes` | Say yes to everything | `--yes` |
+| `--key-type` | Key type: rsa or ecdsa | `ecdsa` |
 | `--key-size` | Key size | `4096` |
 
 ### renew
 
-Renew all certificates due for renewal.
+Update all certificates that need to be renewed.
 
 ```bash
-trusttls renew [--verbose]
+trusttls renew [--show-details]
 ```
 
-## Certbot Compatibility
+## Works Like Certbot
 
-TrustTLS is designed to be a drop-in replacement for Certbot with DigiCert ACME support:
+TrustTLS works just like Certbot but with DigiCert support:
 
 ### Certbot Command
 ```bash
@@ -114,7 +119,7 @@ sudo certbot \
   --email user@example.com
 ```
 
-### TrustTLS Equivalent
+### TrustTLS Command
 ```bash
 trusttls install \
   --apache \
@@ -126,45 +131,45 @@ trusttls install \
   --yes
 ```
 
-## Key Differences from Certbot
+## Why TrustTLS is Better
 
-1. **No sudo required**: TrustTLS runs without root privileges
-2. **Better UI**: Interactive progress indicators and clear error messages
-3. **Dual provider**: Built-in support for both Let's Encrypt and DigiCert
-4. **Account management**: Secure credential storage for automatic renewal
-5. **Standard paths**: Certificates stored in user directory, not root
+1. **No sudo needed**: Runs without special permissions
+2. **Better display**: Clear progress and helpful messages
+3. **Two options**: Both Let's Encrypt and DigiCert support
+4. **Smart setup**: Saves your info for automatic updates
+5. **Safe files**: Certificates saved in your home folder
 
-## File Structure
+## Where Files Are Saved
 
-TrustTLS stores all data in the user's home directory:
+TrustTLS saves everything in your home folder:
 
 ```
 ~/.trusttls/
 ├── accounts/
 │   ├── letsencrypt/
 │   │   └── admin@example.com/
-│   │       └── credentials.json
+│   │       └── login-info.json
 │   └── digicert/
 │       └── admin@example.com/
-│           └── credentials.json
+│           └── login-info.json
 ├── live/
 │   └── example.com/
-│       ├── cert.pem          # Server certificate
-│       ├── chain.pem         # Intermediate certificate
-│       ├── fullchain.pem     # Full chain (cert + intermediate)
-│       └── privkey.pem        # Private key
+│       ├── cert.pem          # Your website certificate
+│       ├── chain.pem         # Middle certificate
+│       ├── fullchain.pem     # Both certificates together
+│       └── privkey.pem        # Your private key
 ├── archive/
 │   └── example.com/
-│       └── 20240104-120500/  # Timestamped backup
+│       └── 20240104-120500/  # Old copies
 └── renewal/
-    └── example.com.yaml      # Renewal configuration
+    └── example.com.yaml      # Update settings
 ```
 
-## Web Server Configuration
+## Web Server Setup
 
 ### Apache
 
-TrustTLS automatically creates SSL virtual host configurations:
+TrustTLS sets up SSL for Apache automatically:
 
 ```apache
 <IfModule mod_ssl.c>
@@ -190,26 +195,26 @@ server {
 }
 ```
 
-## Provider Configuration
+## Certificate Providers
 
 ### Let's Encrypt
 
 - **Production**: `https://acme-v02.api.letsencrypt.org/directory`
-- **Staging**: `https://acme-staging-v02.api.letsencrypt.org/directory`
-- **No additional credentials required**
+- **Testing**: `https://acme-staging-v02.api.letsencrypt.org/directory`
+- **No extra info needed**
 
 ### DigiCert ACME
 
-- **Directory URL**: `https://one.digicert.com/mpki/api/v1/acme/v2/directory`
-- **EAB KID**: Provided by DigiCert
-- **EAB HMAC Key**: Provided by DigiCert
+- **Server URL**: `https://one.digicert.com/mpki/api/v1/acme/v2/directory`
+- **EAB KID**: Given by DigiCert
+- **EAB HMAC Key**: Given by DigiCert
 
-## Advanced Usage
+## More Examples
 
-### Manual CSR Generation
+### Get Certificate and Private Key
 
 ```bash
-# Generate CSR and private key
+# Create CSR and private key
 trusttls generate-csr --domain example.com --email admin@example.com
 
 # Use with DigiCert
@@ -222,66 +227,66 @@ trusttls install \
   --eab-hmac-key "<EAB_HMAC_KEY>"
 ```
 
-### Certificate Renewal
+### Update Certificates
 
 ```bash
-# Renew all certificates
+# Update all certificates
 trusttls renew
 
-# Renew with verbose output
-trusttls renew --verbose
+# Show details while updating
+trusttls renew --show-details
 
-# Force renewal (ignores expiry time)
+# Force update (ignore time)
 trusttls renew --force
 ```
 
-## Troubleshooting
+## Common Problems
 
-### Common Issues
+### Issues You Might See
 
-1. **Permission denied**: Ensure web server can access certificate files
-2. **Web server not detected**: Use `--apache` or `--nginx` flags explicitly
-3. **EAB credentials invalid**: Verify KID and HMAC key with DigiCert
-4. **Domain validation failed**: Ensure domain points to server and webroot is accessible
+1. **Permission denied**: Make sure web server can read certificate files
+2. **Web server not found**: Use `--apache` or `--nginx` to specify
+3. **EAB info wrong**: Check your KID and HMAC key with DigiCert
+4. **Domain check failed**: Make sure your domain points to this server
 
 ### Debug Mode
 
 ```bash
-# Enable verbose logging
-trusttls install --domain example.com --email admin@example.com --verbose
+# Show more information
+trusttls install --domain example.com --email admin@example.com --show-details
 
-# Check configuration
+# Check setup
 trusttls check --domain example.com
 ```
 
-## Security
+## Safety
 
-- Private keys are stored with 600 permissions
-- Account credentials are encrypted at rest
-- ACME challenges use secure HTTP validation
-- No root privileges required
+- Private keys are kept safe (only you can read them)
+- Account info is stored securely
+- ACME checks use safe HTTP validation
+- No special permissions needed
 
-## Integration
+## Automatic Updates
 
-### Systemd Timer
+### System Timer
 
 ```bash
-# Create renewal timer
-sudo systemctl enable trusttls-renewal.timer
-sudo systemctl start trusttls-renewal.timer
+# Set up automatic updates
+sudo systemctl enable trusttls-updates.timer
+sudo systemctl start trusttls-updates.timer
 ```
 
 ### Cron Job
 
 ```bash
-# Add to crontab for daily renewal
+# Add to daily schedule
 0 2 * * * /usr/local/bin/trusttls renew --quiet
 ```
 
-## Support
+## Need Help?
 
 - **Documentation**: [GitHub Wiki](https://github.com/trustctl/trusttls/wiki)
-- **Issues**: [GitHub Issues](https://github.com/trustctl/trusttls/issues)
+- **Report Issues**: [GitHub Issues](https://github.com/trustctl/trusttls/issues)
 - **Community**: [Discord Server](https://discord.gg/trusttls)
 
 ## License

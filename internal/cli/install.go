@@ -32,16 +32,18 @@ var installCmd = &cobra.Command{
 		target, _ := cmd.Flags().GetString("target")
 		assumeYes, _ := cmd.Flags().GetBool("yes")
 		
-		// Apache/Nginx plugin flags (like certbot --apache, --nginx)
+		// Web server choice flags (simple English)
+		webServer, _ := cmd.Flags().GetString("web-server")
 		apacheFlag, _ := cmd.Flags().GetString("apache")
 		nginxFlag, _ := cmd.Flags().GetString("nginx")
 		
-		// DigiCert ACME EAB flags (matching certbot behavior)
+		// Certificate provider flags (simple English)
 		provider, _ := cmd.Flags().GetString("provider")
-		eabKID, _ := cmd.Flags().GetString("eab-kid")
-		eabHMACKey, _ := cmd.Flags().GetString("eab-hmac-key")
+		certProvider, _ := cmd.Flags().GetString("cert-provider")
+		digicertKey, _ := cmd.Flags().GetString("digicert-key")
+		digicertSecret, _ := cmd.Flags().GetString("digicert-secret")
 		accountID, _ := cmd.Flags().GetString("account-id")
-		organizationID, _ := cmd.Flags().GetString("organization-id")
+		orgID, _ := cmd.Flags().GetString("org-id")
 		
 		if domain == "" || email == "" {
 			ui.PrintError("Domain and email are required")
@@ -92,9 +94,11 @@ var installCmd = &cobra.Command{
 		
 		// Determine provider and set defaults
 		if provider == "" {
-			if eabKID != "" || eabHMACKey != "" {
+			if certProvider != "" {
+				provider = certProvider
+			} else if digicertKey != "" || digicertSecret != "" {
 				provider = "digicert"
-				ui.PrintInfo("Auto-detected DigiCert provider from EAB credentials")
+				ui.PrintInfo("Auto-detected DigiCert provider from credentials")
 			} else {
 				provider = "letsencrypt"
 				ui.PrintInfo("Using Let's Encrypt (free certificates)")
@@ -109,51 +113,51 @@ var installCmd = &cobra.Command{
 		if provider == "digicert" {
 			ui.PrintStepWithTime(3, 6, "🔐 Configuring DigiCert ACME provider", 15*time.Second)
 			
-			// Validate DigiCert ACME requirements
+			// Validate DigiCert requirements
 			if server == "" {
-				ui.ShowErrorWithHelp(fmt.Errorf("ACME directory URL is required for DigiCert"), 
-					"• Provide the DigiCert ACME directory URL\n• Example: https://one.digicert.com/mpki/api/v1/acme/v2/directory\n• Contact your DigiCert administrator for the correct URL")
-				return fmt.Errorf("ACME directory URL required for DigiCert")
+				ui.ShowErrorWithHelp(fmt.Errorf("Server URL is required for DigiCert"), 
+					"• Provide the DigiCert server URL\n• Example: https://one.digicert.com/mpki/api/v1/acme/v2/directory\n• Contact your DigiCert admin for the correct URL")
+				return fmt.Errorf("server URL required for DigiCert")
 			}
-			if eabKID == "" || eabHMACKey == "" {
-				ui.ShowErrorWithHelp(fmt.Errorf("EAB credentials are required for DigiCert ACME"),
-					"• EAB KID: External Account Binding Key ID from DigiCert\n• EAB HMAC Key: External Account Binding HMAC Key from DigiCert\n• These credentials are provided by your DigiCert administrator")
-				return fmt.Errorf("eab-kid and eab-hmac-key required for DigiCert ACME")
+			if digicertKey == "" || digicertSecret == "" {
+				ui.ShowErrorWithHelp(fmt.Errorf("DigiCert credentials are required"),
+					"• digicert-key: Key ID from DigiCert\n• digicert-secret: Secret key from DigiCert\n• These are provided by your DigiCert administrator")
+				return fmt.Errorf("digicert-key and digicert-secret required for DigiCert")
 			}
 			
-			// Store DigiCert ACME credentials securely
-			ui.PrintProgress("Securing DigiCert ACME credentials...")
-			if err := accountManager.SaveDigiCertACMEAccount(email, server, eabKID, eabHMACKey, accountID, organizationID); err != nil {
-				ui.ShowErrorWithHelp(fmt.Errorf("failed to secure DigiCert ACME credentials: %w", err),
+			// Store DigiCert credentials securely
+			ui.PrintProgress("Securing DigiCert credentials...")
+			if err := accountManager.SaveDigiCertACMEAccount(email, server, digicertKey, digicertSecret, accountID, orgID); err != nil {
+				ui.ShowErrorWithHelp(fmt.Errorf("failed to secure DigiCert credentials: %w", err),
 					"• Check file permissions in ~/.trusttls/\n• Ensure sufficient disk space\n• Verify credentials are correctly formatted")
-				return fmt.Errorf("failed to secure DigiCert ACME credentials: %w", err)
+				return fmt.Errorf("failed to secure DigiCert credentials: %w", err)
 			}
 			ui.CompleteProgress()
 			
 			// Initialize DigiCert ACME client
-			ui.PrintStepWithTime(4, 6, "🚀 Provisioning certificate via DigiCert ACME", 30*time.Second)
-			ui.PrintProgress("Establishing ACME connection with EAB...")
+			ui.PrintStepWithTime(4, 6, "🚀 Getting certificate from DigiCert", 30*time.Second)
+			ui.PrintProgress("Connecting to DigiCert with credentials...")
 			
 			digiCertConfig, err := accountManager.GetDigiCertACMEConfig(email)
 			if err != nil {
-				ui.ShowErrorWithHelp(fmt.Errorf("failed to retrieve DigiCert ACME configuration: %w", err),
+				ui.ShowErrorWithHelp(fmt.Errorf("failed to get DigiCert configuration: %w", err),
 					"• Verify credentials were saved correctly\n• Check account folder permissions\n• Ensure email address matches saved account")
-				return fmt.Errorf("failed to retrieve DigiCert ACME configuration: %w", err)
+				return fmt.Errorf("failed to get DigiCert configuration: %w", err)
 			}
 			
 			digiCertProvider, err := acme.NewDigiCertACMEProvider(*digiCertConfig)
 			if err != nil {
-				ui.ShowErrorWithHelp(fmt.Errorf("failed to initialize DigiCert ACME client: %w", err),
-					"• Verify DigiCert ACME directory URL is accessible\n• Check EAB credentials are valid\n• Ensure network connectivity to DigiCert servers")
-				return fmt.Errorf("failed to initialize DigiCert ACME client: %w", err)
+				ui.ShowErrorWithHelp(fmt.Errorf("failed to connect to DigiCert: %w", err),
+					"• Verify DigiCert server URL is accessible\n• Check credentials are valid\n• Ensure network connectivity to DigiCert servers")
+				return fmt.Errorf("failed to connect to DigiCert: %w", err)
 			}
 			
 			ui.PrintProgress("Requesting certificate from DigiCert...")
 			cert, err = digiCertProvider.ObtainCertificate([]string{domain})
 			if err != nil {
-				ui.ShowErrorWithHelp(fmt.Errorf("certificate provisioning failed: %w", err),
-					"• Verify domain ownership and DNS configuration\n• Check that domain points to this server\n• Ensure web server is accessible for HTTP validation\n• Verify DigiCert account has sufficient permissions")
-				return fmt.Errorf("certificate provisioning failed: %w", err)
+				ui.ShowErrorWithHelp(fmt.Errorf("certificate request failed: %w", err),
+					"• Verify domain ownership and DNS setup\n• Check that domain points to this server\n• Ensure web server is accessible for validation\n• Verify DigiCert account has enough permissions")
+				return fmt.Errorf("certificate request failed: %w", err)
 			}
 			ui.CompleteProgress()
 			
@@ -196,54 +200,75 @@ var installCmd = &cobra.Command{
 			}
 			ui.CompleteProgress()
 			
-			// Detect web server (like certbot --apache, --nginx)
-			ui.PrintStep(3, 5, "Detecting web server configuration")
+			// Detect web server (simple English flags)
+			ui.PrintStepWithTime(5, 6, "🌐 Setting up web server", 10*time.Second)
 			var installer Installer
 			var chosen string
 			
-			// Handle plugin flags like certbot
-			if apacheFlag != "" {
+			// Handle simple web server flags
+			if webServer != "" {
+				if webServer == "apache" {
+					if !apache.Available() { 
+						ui.PrintError("Apache web server not found")
+						return fmt.Errorf("apache web server not found") 
+					}
+					installer = apache.NewInstaller(storeDir, assumeYes); chosen = "apache"
+					ui.PrintInfo("Using Apache web server")
+				} else if webServer == "nginx" {
+					if !nginx.Available() { 
+						ui.PrintError("Nginx web server not found")
+						return fmt.Errorf("nginx web server not found") 
+					}
+					installer = nginx.NewInstaller(storeDir, assumeYes); chosen = "nginx"
+					ui.PrintInfo("Using Nginx web server")
+				} else {
+					ui.ShowErrorWithHelp(fmt.Errorf("unknown web server: %s", webServer),
+						"• Use 'apache' for Apache web server\n• Use 'nginx' for Nginx web server\n• Or leave empty for auto-detection")
+					return fmt.Errorf("unknown web server: %s", webServer)
+				}
+			} else if apacheFlag != "" {
 				if !apache.Available() { 
-					ui.PrintError("Apache not detected")
-					return fmt.Errorf("apache not detected") 
+					ui.PrintError("Apache web server not found")
+					return fmt.Errorf("apache web server not found") 
 				}
 				installer = apache.NewInstaller(storeDir, assumeYes); chosen = "apache"
-				ui.PrintInfo("Using Apache plugin (like certbot --apache)")
+				ui.PrintInfo("Using Apache web server")
 			} else if nginxFlag != "" {
 				if !nginx.Available() { 
-					ui.PrintError("Nginx not detected")
-					return fmt.Errorf("nginx not detected") 
+					ui.PrintError("Nginx web server not found")
+					return fmt.Errorf("nginx web server not found") 
 				}
 				installer = nginx.NewInstaller(storeDir, assumeYes); chosen = "nginx"
-				ui.PrintInfo("Using Nginx plugin (like certbot --nginx)")
+				ui.PrintInfo("Using Nginx web server")
 			} else if target == "" {
-				// Auto-detect like certbot
+				// Auto-detect web servers
 				if apache.Available() { 
 					installer = apache.NewInstaller(storeDir, assumeYes); 
 					chosen = "apache" 
-					ui.PrintInfo("Detected Apache web server")
+					ui.PrintInfo("Found Apache web server")
 				}
 				if installer == nil && nginx.Available() { 
 					installer = nginx.NewInstaller(storeDir, assumeYes); 
 					chosen = "nginx" 
-					ui.PrintInfo("Detected Nginx web server")
+					ui.PrintInfo("Found Nginx web server")
 				}
 			} else if target == "apache" {
 				if !apache.Available() { 
-					ui.PrintError("Apache not detected")
-					return fmt.Errorf("apache not detected") 
+					ui.PrintError("Apache web server not found")
+					return fmt.Errorf("apache web server not found") 
 				}
 				installer = apache.NewInstaller(storeDir, assumeYes); chosen = "apache"
 				ui.PrintInfo("Using Apache web server")
 			} else if target == "nginx" {
 				if !nginx.Available() { 
-					ui.PrintError("Nginx not detected")
-					return fmt.Errorf("nginx not detected") 
+					ui.PrintError("Nginx web server not found")
+					return fmt.Errorf("nginx web server not found") 
 				}
 				installer = nginx.NewInstaller(storeDir, assumeYes); chosen = "nginx"
 				ui.PrintInfo("Using Nginx web server")
 			} else {
-				ui.PrintError(fmt.Sprintf("Unknown target: %s", target))
+				ui.ShowErrorWithHelp(fmt.Errorf("unknown target: %s", target),
+					"• Use 'apache' for Apache web server\n• Use 'nginx' for Nginx web server\n• Or leave empty for auto-detection")
 				return fmt.Errorf("unknown target: %s", target)
 			}
 			if installer == nil {
@@ -418,16 +443,18 @@ func init() {
 	installCmd.Flags().String("target", "", "Install target: apache or nginx; auto-detect if empty")
 	installCmd.Flags().Bool("yes", false, "Assume yes when prompting to modify vhost files")
 	
-	// Apache/Nginx plugin flags (like certbot --apache, --nginx)
-	installCmd.Flags().String("apache", "", "Use Apache plugin for installation")
-	installCmd.Flags().String("nginx", "", "Use Nginx plugin for installation")
+	// Web server choice flags (simple English)
+	installCmd.Flags().String("web-server", "", "Web server type: apache or nginx")
+	installCmd.Flags().String("apache", "", "Use Apache web server")
+	installCmd.Flags().String("nginx", "", "Use Nginx web server")
 	
-	// DigiCert ACME EAB flags (matching certbot behavior)
+	// Certificate provider flags (simple English)
 	installCmd.Flags().String("provider", "", "Certificate provider: letsencrypt or digicert")
-	installCmd.Flags().String("eab-kid", "", "DigiCert ACME EAB Key ID (like certbot --eab-kid)")
-	installCmd.Flags().String("eab-hmac-key", "", "DigiCert ACME EAB HMAC Key (like certbot --eab-hmac-key)")
+	installCmd.Flags().String("cert-provider", "", "Certificate provider: letsencrypt or digicert")
+	installCmd.Flags().String("digicert-key", "", "DigiCert key ID")
+	installCmd.Flags().String("digicert-secret", "", "DigiCert secret key")
 	installCmd.Flags().String("account-id", "", "DigiCert account ID")
-	installCmd.Flags().String("organization-id", "", "DigiCert organization ID")
+	installCmd.Flags().String("org-id", "", "DigiCert organization ID")
 }
 
 // Validation functions
