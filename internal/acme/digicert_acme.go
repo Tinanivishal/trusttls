@@ -1,17 +1,20 @@
+//go:build digicert
+// +build digicert
+
 package acme
 
 import (
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/pem"
+	// "crypto/ecdsa"
+	// "crypto/elliptic"
+	// "crypto/rand"
+	// "crypto/rsa"
+	// "crypto/x509"
+	// "crypto/x509/pkix"
+	// "encoding/pem"
 	"fmt"
 	"net/http"
-	"strings"
+	// "strings"
 	"time"
 
 	"github.com/go-acme/lego/v4/certificate"

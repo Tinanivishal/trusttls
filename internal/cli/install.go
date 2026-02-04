@@ -5,7 +5,6 @@ import (
 	"net"
 	"net/http"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/go-acme/lego/v4/certificate"
@@ -21,7 +20,9 @@ var installCmd = &cobra.Command{
 	Use:   "install",
 	Short: "Obtain and install a certificate into Apache or Nginx",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ui := NewUI()
+		// Pass verbose flag (you might want to get this from command line flag)
+		verbose, _ := cmd.Flags().GetBool("verbose")
+		ui := NewUI(verbose)
 		
 		domain, _ := cmd.Flags().GetString("domain")
 		email, _ := cmd.Flags().GetString("email")
@@ -108,7 +109,7 @@ var installCmd = &cobra.Command{
 		ui.ShowProviderInfo(provider)
 		
 		var cert *certificate.Resource
-		var err error
+		// Remove unused err variable declaration here
 		
 		if provider == "digicert" {
 			ui.PrintStepWithTime(3, 6, "🔐 Configuring DigiCert ACME provider", 15*time.Second)
@@ -288,7 +289,9 @@ var installCmd = &cobra.Command{
 			}
 			
 			if !assumeYes {
-				if !ui.ShowVhostConfirmation(domain, webserver, configPath) {
+				// Just show confirmation, don't try to use return value
+				ui.ShowVhostConfirmation(domain, configPath, webserver)
+				if !ui.AskYesNo("Proceed with this configuration?") {
 					ui.PrintInfo("Installation cancelled by user")
 					return nil
 				}
@@ -389,7 +392,9 @@ var installCmd = &cobra.Command{
 		}
 		
 		if !assumeYes {
-			if !ui.ShowVhostConfirmation(domain, webserver, configPath) {
+			// Just show confirmation, don't try to use return value
+			ui.ShowVhostConfirmation(domain, configPath, webserver)
+			if !ui.AskYesNo("Proceed with this configuration?") {
 				ui.PrintInfo("Installation cancelled by user")
 				return nil
 			}
@@ -442,6 +447,9 @@ func init() {
 	installCmd.Flags().String("server", "", "ACME directory URL; overrides --staging")
 	installCmd.Flags().String("target", "", "Install target: apache or nginx; auto-detect if empty")
 	installCmd.Flags().Bool("yes", false, "Assume yes when prompting to modify vhost files")
+	
+	// Add verbose flag
+	installCmd.Flags().Bool("verbose", false, "Show verbose output")
 	
 	// Web server choice flags (simple English)
 	installCmd.Flags().String("web-server", "", "Web server type: apache or nginx")

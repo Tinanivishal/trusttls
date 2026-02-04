@@ -1,3 +1,6 @@
+//go:build digicert
+// +build digicert
+
 package acme
 
 import (

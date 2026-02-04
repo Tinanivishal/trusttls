@@ -105,7 +105,7 @@ func (ui *UI) ShowTimedProgress(message string, duration time.Duration) {
 	
 	spinner := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 	start := time.Now()
-	estimatedStr := fmt.Sprintf("(~%v)", duration.Round(time.Second))
+	// Remove unused variable: estimatedStr
 	
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()

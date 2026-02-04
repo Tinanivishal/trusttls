@@ -102,22 +102,7 @@ Update all certificates that need to be renewed.
 trusttls renew [--show-details]
 ```
 
-## Works Like Certbot
 
-TrustTLS works just like Certbot but with DigiCert support:
-
-### Certbot Command
-```bash
-sudo certbot \
-  --apache \
-  --server https://one.digicert.com/mpki/api/v1/acme/v2/directory \
-  --eab-kid "<EAB_KID>" \
-  --eab-hmac-key "<EAB_HMAC_KEY>" \
-  --domain example.com \
-  --agree-tos \
-  --non-interactive \
-  --email user@example.com
-```
 
 ### TrustTLS Command
 ```bash
