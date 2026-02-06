@@ -13,8 +13,23 @@ import (
 )
 
 var certonlyCmd = &cobra.Command{
-	Use:   "certonly",
-	Short: "Obtain a certificate without installing it",
+	Use:   "get-cert",
+	Short: "Get an SSL certificate for your website",
+	Long: `
+Get an SSL certificate without installing it automatically.
+
+This command obtains a certificate from your chosen provider and saves it
+to your local system. You can then manually install it wherever needed.
+
+Perfect for:
+• Testing certificate generation
+• Custom installation setups  
+• Learning how SSL certificates work
+• Backup certificate generation
+
+Example:
+  trusttls get-cert --domain example.com --email admin@example.com
+`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		domain, _ := cmd.Flags().GetString("domain")
 		if domain == "" { domain, _ = cmd.Flags().GetString("website") }
@@ -22,24 +37,27 @@ var certonlyCmd = &cobra.Command{
 		if email == "" { email, _ = cmd.Flags().GetString("contact") }
 		keyType, _ := cmd.Flags().GetString("key-type")
 		keySize, _ := cmd.Flags().GetInt("key-size")
-		staging, _ := cmd.Flags().GetBool("staging")
+		testMode, _ := cmd.Flags().GetBool("test-mode")
 		server, _ := cmd.Flags().GetString("server")
 		webroot, _ := cmd.Flags().GetString("webroot")
 		if webroot == "" { webroot, _ = cmd.Flags().GetString("web-root") }
+		
 		if domain == "" || email == "" {
-			return fmt.Errorf("domain and email are required")
+			return fmt.Errorf("website domain and email address are required")
 		}
+		
 		if server == "" {
-			if staging {
+			if testMode {
 				server = acme.LetsEncryptStaging
 			} else {
 				server = acme.LetsEncryptProd
 			}
 		}
+		
 		if webroot == "" {
 			wr := detectWebroot(domain)
 			if wr == "" {
-				return fmt.Errorf("webroot not found for %s; pass --webroot explicitly or ensure Apache/Nginx vhost:80 exists", domain)
+				return fmt.Errorf("website folder not found for %s; please specify --webroot or ensure Apache/Nginx is configured", domain)
 			}
 			webroot = wr
 		}
@@ -63,7 +81,14 @@ var certonlyCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Certificate obtained and stored at %s\n", path)
+		fmt.Printf("🎉 SSL certificate successfully obtained!\n")
+		fmt.Printf("📁 Certificate saved to: %s\n", path)
+		fmt.Printf("🌐 Domain: %s\n", domain)
+		fmt.Printf("📧 Email: %s\n", email)
+		fmt.Printf("💡 Next steps:\n")
+		fmt.Printf("   • Install the certificate files on your web server\n")
+		fmt.Printf("   • Set up automatic renewal with: trusttls renew\n")
+		fmt.Printf("   • Test your SSL setup at: https://www.ssllabs.com/ssltest/\n")
 
 		// Save renewal configuration
 		_ = renewal.Save(renewal.Config{
@@ -99,14 +124,14 @@ func detectWebroot(domain string) string {
 
 func init() {
 	rootCmd.AddCommand(certonlyCmd)
-	certonlyCmd.Flags().String("domain", "", "Domain name (same as --website)")
-	certonlyCmd.Flags().String("website", "", "Website name (domain)")
-	certonlyCmd.Flags().String("email", "", "Contact email (same as --contact)")
-	certonlyCmd.Flags().String("contact", "", "Contact email")
-	certonlyCmd.Flags().String("key-type", "rsa", "Key algorithm: rsa or ecdsa")
-	certonlyCmd.Flags().Int("key-size", 2048, "Key size for rsa or curve bits (256/384) for ecdsa")
-	certonlyCmd.Flags().Bool("staging", false, "Use Let's Encrypt staging CA")
-	certonlyCmd.Flags().String("server", "", "ACME directory URL; overrides --staging")
-	certonlyCmd.Flags().String("webroot", "", "Explicit webroot for HTTP-01 (same as --web-root)")
-	certonlyCmd.Flags().String("web-root", "", "Explicit webroot for HTTP-01")
+	certonlyCmd.Flags().String("domain", "", "Your website domain name (e.g., example.com)")
+	certonlyCmd.Flags().String("website", "", "Your website domain name (same as --domain)")
+	certonlyCmd.Flags().String("email", "", "Your email address for certificate notifications")
+	certonlyCmd.Flags().String("contact", "", "Your email address (same as --email)")
+	certonlyCmd.Flags().String("key-type", "rsa", "Encryption key type: rsa (recommended) or ecdsa")
+	certonlyCmd.Flags().Int("key-size", 2048, "Key strength: 2048 or 4096 for RSA, 256 or 384 for ECDSA")
+	certonlyCmd.Flags().Bool("test-mode", false, "Use test environment (won't issue real certificates)")
+	certonlyCmd.Flags().String("server", "", "Custom certificate provider URL")
+	certonlyCmd.Flags().String("webroot", "", "Website folder for validation (e.g., /var/www/html)")
+	certonlyCmd.Flags().String("web-root", "", "Website folder for validation (same as --webroot)")
 }

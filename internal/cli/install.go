@@ -17,8 +17,26 @@ import (
 )
 
 var installCmd = &cobra.Command{
-	Use:   "install",
-	Short: "Obtain and install a certificate into Apache or Nginx",
+	Use:   "setup",
+	Short: "Set up SSL certificate automatically on your web server",
+	Long: `
+Automatically obtain and install an SSL certificate on your web server.
+
+This is the easiest way to secure your website with HTTPS:
+• Detects your web server (Apache or Nginx)
+• Obtains certificate from your chosen provider
+• Installs and configures SSL automatically
+• Sets up automatic renewal
+
+Perfect for beginners and quick SSL setup!
+
+Example:
+  trusttls setup --domain example.com --email admin@example.com
+
+Supported web servers:
+• Apache 2.4+
+• Nginx 1.10+
+`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Pass verbose flag (you might want to get this from command line flag)
 		verbose, _ := cmd.Flags().GetBool("verbose")
@@ -146,11 +164,16 @@ var installCmd = &cobra.Command{
 				return fmt.Errorf("failed to get DigiCert configuration: %w", err)
 			}
 			
-			digiCertProvider, err := acme.NewDigiCertACMEProvider(*digiCertConfig)
+			digiCertProviderInterface, err := acme.NewDigiCertACMEProvider(*digiCertConfig)
 			if err != nil {
 				ui.ShowErrorWithHelp(fmt.Errorf("failed to connect to DigiCert: %w", err),
 					"• Verify DigiCert server URL is accessible\n• Check credentials are valid\n• Ensure network connectivity to DigiCert servers")
 				return fmt.Errorf("failed to connect to DigiCert: %w", err)
+			}
+			
+			digiCertProvider, ok := digiCertProviderInterface.(interface{ ObtainCertificate([]string) (*certificate.Resource, error) })
+			if !ok {
+				return fmt.Errorf("DigiCert ACME provider interface not available")
 			}
 			
 			ui.PrintProgress("Requesting certificate from DigiCert...")

@@ -24,15 +24,6 @@ import (
 	"github.com/go-acme/lego/v4/certificate"
 )
 
-type DigiCertConfig struct {
-	ServerURL       string
-	HMACID          string
-	HMACKey         string
-	APIKey          string
-	AccountID       string
-	OrganizationID  string
-}
-
 type DigiCertProvider struct {
 	config DigiCertConfig
 	client *http.Client
@@ -73,7 +64,7 @@ type DigiCertDCVMethod struct {
 	Status string `json:"status"`
 }
 
-func NewDigiCertProvider(config DigiCertConfig) *DigiCertProvider {
+func NewDigiCertProviderImpl(config DigiCertConfig) *DigiCertProvider {
 	return &DigiCertProvider{
 		config: config,
 		client: &http.Client{Timeout: 30 * time.Second},

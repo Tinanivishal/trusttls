@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-acme/lego/v4/certificate"
 	"github.com/trustctl/trusttls/internal/acme"
 	"github.com/trustctl/trusttls/internal/store"
 	"gopkg.in/yaml.v3"
@@ -77,7 +78,16 @@ func renewOne(c Config, verbose bool) error {
 			return fmt.Errorf("failed to load DigiCert credentials: %w", err)
 		}
 		
-		provider := acme.NewDigiCertProvider(*digiCertConfig)
+		providerInterface, err := acme.NewDigiCertProvider(*digiCertConfig)
+		if err != nil {
+			return fmt.Errorf("failed to create DigiCert provider: %w", err)
+		}
+		
+		provider, ok := providerInterface.(interface{ ObtainCertificate([]string) (*certificate.Resource, error) })
+		if !ok {
+			return fmt.Errorf("DigiCert provider interface not available")
+		}
+		
 		cert, err := provider.ObtainCertificate([]string{c.Domain})
 		if err != nil {
 			return err

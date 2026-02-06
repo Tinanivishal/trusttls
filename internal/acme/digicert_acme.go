@@ -5,16 +5,8 @@ package acme
 
 import (
 	"crypto"
-	// "crypto/ecdsa"
-	// "crypto/elliptic"
-	// "crypto/rand"
-	// "crypto/rsa"
-	// "crypto/x509"
-	// "crypto/x509/pkix"
-	// "encoding/pem"
 	"fmt"
 	"net/http"
-	// "strings"
 	"time"
 
 	"github.com/go-acme/lego/v4/certificate"
@@ -22,16 +14,6 @@ import (
 	"github.com/go-acme/lego/v4/lego"
 	"github.com/go-acme/lego/v4/registration"
 )
-
-type DigiCertEABConfig struct {
-	ServerURL   string
-	EABKID      string
-	EABHMACKey  string
-	Email       string
-	KeyType     string
-	KeySize     int
-	BaseDir     string
-}
 
 type digicertUser struct {
 	Email        string
@@ -48,7 +30,7 @@ type DigiCertACMEProvider struct {
 	opts   DigiCertEABConfig
 }
 
-func NewDigiCertACMEProvider(opts DigiCertEABConfig) (*DigiCertACMEProvider, error) {
+func NewDigiCertACMEProviderImpl(opts DigiCertEABConfig) (*DigiCertACMEProvider, error) {
 	if opts.EABKID == "" || opts.EABHMACKey == "" {
 		return nil, fmt.Errorf("EAB KID and HMAC key required")
 	}
